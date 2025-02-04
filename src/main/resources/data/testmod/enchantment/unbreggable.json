@@ -1,0 +1,19 @@
+{
+  "description": {
+    "translate": "UnbrEggable"
+  },
+
+  "supported_items": ["minecraft:egg"],
+  "weight": 12,
+  "max_level": 1,
+  "max_cost": {
+    "base": 20,
+    "per_level_above_first": 9
+  },
+  "min_cost": {
+    "base": 2,
+    "per_level_above_first": 8
+  },
+  "anvil_cost": 1,
+  "slots": ["mainhand"]
+}

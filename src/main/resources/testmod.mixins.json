@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "io.github.kreiseljustus.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins" : [
+      "ThrownEggMixin"
+  ],
+  "client": [
+
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
