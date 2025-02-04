@@ -1,22 +1,30 @@
 package io.github.kreiseljustus.mixin;
 
+import io.github.kreiseljustus.TestMod;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ThrownEgg;
+import net.minecraft.world.item.EggItem;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.EntityHitResult;
@@ -36,6 +44,9 @@ import java.util.Random;
 public class ThrownEggMixin {
     private final static Random random = new Random();
 
+    ResourceKey<Enchantment> RETURN = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "return"));
+    ResourceKey<Enchantment> UNBREGGABLE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "unbreggable"));
+
     @Inject(method = "<init>(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V", at = @At("TAIL"))
     private void onEggThrown(Level level, LivingEntity owner, ItemStack item, CallbackInfo ci) {
         ThrownEgg egg = (ThrownEgg) (Object) this;
@@ -51,47 +62,54 @@ public class ThrownEggMixin {
         Player player = (Player) egg.getOwner();
         Level level = egg.level();
 
-        if(result.getType() == HitResult.Type.ENTITY) {
-            EntityHitResult entityHitResult = (EntityHitResult) result;
+        if(getEnchantmentLevel(egg.getItem(), UNBREGGABLE) > 0) {
 
-            Entity entity = entityHitResult.getEntity();
 
-            if(entity instanceof Player && entity.equals(player)) {
+            if (result.getType() == HitResult.Type.ENTITY) {
+                EntityHitResult entityHitResult = (EntityHitResult) result;
+
+                Entity entity = entityHitResult.getEntity();
+
+                if (entity instanceof Player && entity.equals(player)) {
+                    egg.discard();
+                    player.addItem(egg.getItem());
+                } else {
+                    entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), 5.25f);
+                }
+            }
+
+            if (player == null) {
                 egg.discard();
-                player.addItem(egg.getItem());
+                ci.cancel();
+                return;
+            }
+
+            int RETURN_LEVEL = getEnchantmentLevel(egg.getItem(), RETURN);
+            if (RETURN_LEVEL > 0) {
+                Vec3 direction = new Vec3(player.getX() - egg.getX(), player.getY() - egg.getY(), player.getZ() - egg.getZ());
+
+                direction = direction.normalize();
+
+                egg.setDeltaMovement(direction.scale(0.5 * RETURN_LEVEL).x, 0.4, direction.scale(0.5 * RETURN_LEVEL).z);
             } else {
-                entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), 5.25f);
+                level.addFreshEntity(new ItemEntity(level, egg.getX(), egg.getY(), egg.getZ(), egg.getItem()));
+                egg.discard();
             }
+
+            level.addParticle(ParticleTypes.CLOUD, egg.getX(), egg.getY(), egg.getZ(), 0, 0.1, 0);
+
+            ci.cancel();
         }
+    }
 
-        if(player == null) {egg.discard();ci.cancel();return;}
-
-        if(egg.getItem().has(DataComponents.ENCHANTMENTS)) {
-
-        }
-
-        Vec3 direction = new Vec3(player.getX() - egg.getX(), player.getY() - egg.getY(), player.getZ() - egg.getZ());
-
-        direction = direction.normalize();
-
-        egg.setDeltaMovement(direction.scale(0.5).x, 0.4, direction.scale(0.5).z);
-
-
-
-        for(int i = 0; i < 5; i++) {
-            for(int k = 0; k < 5; k++) {
-                FallingBlockEntity block = FallingBlockEntity.fall(level, new BlockPos((int) egg.getX(), (int) egg.getY(), (int) egg.getZ()), Blocks.STONE.defaultBlockState());
-                block.setNoGravity(false);
-                block.setDeltaMovement(random.nextDouble() * 0.6, random.nextDouble() * 5.5, random.nextDouble() * 0.6);
-                level.addFreshEntity(block);
-            }
-        }
-
-        
-        //egg.discard();
-
-        level.addParticle(ParticleTypes.CLOUD, egg.getX(), egg.getY(), egg.getZ(),0, 0.1, 0);
-
-        ci.cancel();
+    private static int getEnchantmentLevel(ItemStack item, ResourceKey<Enchantment> enchantment) {
+        return item
+                .getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY)
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().getKey().compareTo(enchantment) == 0)
+                .findAny()
+                .map(entry -> entry.getIntValue())
+                .orElse(0);
     }
 }
