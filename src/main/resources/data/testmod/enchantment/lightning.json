@@ -1,0 +1,20 @@
+{
+  "description": {
+    "translate": "Lightning"
+  },
+
+  "supported_items": ["minecraft:egg"],
+  "weight": 16,
+  "max_level": 3,
+  "max_cost": {
+    "base": 45,
+    "per_level_above_first": 9
+  },
+  "min_cost": {
+    "base": 2,
+    "per_level_above_first": 8
+  },
+  "anvil_cost": 2,
+  "slots": ["mainhand"],
+  "incompatible_with": ["testmod:eggsplosive"]
+}

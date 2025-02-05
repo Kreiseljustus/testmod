@@ -12,6 +12,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LightningBolt;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -46,6 +47,8 @@ public class ThrownEggMixin {
 
     ResourceKey<Enchantment> RETURN = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "return"));
     ResourceKey<Enchantment> UNBREGGABLE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "unbreggable"));
+    ResourceKey<Enchantment> EGGSPLOSIVE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "eggsplosive"));
+    ResourceKey<Enchantment> LIGHTNING = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "lightning"));
 
     @Inject(method = "<init>(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V", at = @At("TAIL"))
     private void onEggThrown(Level level, LivingEntity owner, ItemStack item, CallbackInfo ci) {
@@ -59,24 +62,39 @@ public class ThrownEggMixin {
     @Inject(method = "onHit", at = @At("HEAD"), cancellable = true)
     private void modifyOnHit(HitResult result, CallbackInfo ci) {
         ThrownEgg egg = (ThrownEgg) (Object) this;
+
         Player player = (Player) egg.getOwner();
         Level level = egg.level();
 
-        if(getEnchantmentLevel(egg.getItem(), UNBREGGABLE) > 0) {
+        int EGGSPLOSIVE_LEVEL = getEnchantmentLevel(egg.getItem(), EGGSPLOSIVE);
+        int LIGHTNING_LEVEL = getEnchantmentLevel(egg.getItem(), LIGHTNING);
 
+        if(EGGSPLOSIVE_LEVEL > 0) {
+            level.explode(egg, egg.getX(),egg.getY(),egg.getZ(), 2 * EGGSPLOSIVE_LEVEL, Level.ExplosionInteraction.TNT);
+            egg.discard();
+            ci.cancel();
+        }
 
-            if (result.getType() == HitResult.Type.ENTITY) {
-                EntityHitResult entityHitResult = (EntityHitResult) result;
+        if (result.getType() == HitResult.Type.ENTITY) {
+            EntityHitResult entityHitResult = (EntityHitResult) result;
 
-                Entity entity = entityHitResult.getEntity();
+            Entity entity = entityHitResult.getEntity();
 
-                if (entity instanceof Player && entity.equals(player)) {
-                    egg.discard();
-                    player.addItem(egg.getItem());
-                } else {
-                    entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), 5.25f);
+            if (entity instanceof Player && entity.equals(player)) {
+                egg.discard();
+                player.addItem(egg.getItem());
+            } else {
+                entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), 5.25f);
+
+                if(LIGHTNING_LEVEL > 0) {
+                    LightningBolt bolt = new LightningBolt(EntityType.LIGHTNING_BOLT, level);
+                    bolt.setPos(egg.getX(),egg.getY(),egg.getZ());
+                    level.addFreshEntity(bolt);
                 }
             }
+        }
+
+        if(getEnchantmentLevel(egg.getItem(), UNBREGGABLE) > 0) {
 
             if (player == null) {
                 egg.discard();
