@@ -1,11 +1,11 @@
 {
   "description": {
-    "translate": "Bounce bEgg"
+    "translate": "Damage"
   },
 
   "supported_items": ["minecraft:egg"],
   "primary_items": ["minecraft:egg"],
-  "weight": 27,
+  "weight": 30,
   "max_level": 3,
   "max_cost": {
     "base": 19,

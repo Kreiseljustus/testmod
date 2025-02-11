@@ -4,17 +4,18 @@
   },
 
   "supported_items": ["minecraft:egg"],
-  "weight": 7,
-  "max_level": 5,
+  "primary_items": ["minecraft:egg"],
+  "weight": 24,
+  "max_level": 10,
   "max_cost": {
-    "base": 45,
-    "per_level_above_first": 9
+    "base": 19,
+    "per_level_above_first": 2
   },
   "min_cost": {
-    "base": 2,
-    "per_level_above_first": 8
+    "base": 5,
+    "per_level_above_first": 2
   },
   "anvil_cost": 2,
   "slots": ["mainhand"],
-  "incompatible_with": ["testmod:return"]
+  "exclusive_set": ["testmod:return", "testmod:lightning", "testmod:damage"]
 }

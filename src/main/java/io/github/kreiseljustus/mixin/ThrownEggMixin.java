@@ -22,6 +22,7 @@ import net.minecraft.world.item.EggItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.Unbreakable;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -49,6 +50,7 @@ public class ThrownEggMixin {
     ResourceKey<Enchantment> UNBREGGABLE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "unbreggable"));
     ResourceKey<Enchantment> EGGSPLOSIVE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "eggsplosive"));
     ResourceKey<Enchantment> LIGHTNING = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "lightning"));
+    ResourceKey<Enchantment> DAMAGE = ResourceKey.create(Registries.ENCHANTMENT, ResourceLocation.fromNamespaceAndPath(TestMod.MODID, "damage"));
 
     @Inject(method = "<init>(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;)V", at = @At("TAIL"))
     private void onEggThrown(Level level, LivingEntity owner, ItemStack item, CallbackInfo ci) {
@@ -63,11 +65,18 @@ public class ThrownEggMixin {
     private void modifyOnHit(HitResult result, CallbackInfo ci) {
         ThrownEgg egg = (ThrownEgg) (Object) this;
 
+        egg.setInvulnerable(true);
+        egg.getItem().set(DataComponents.UNBREAKABLE, new Unbreakable(true));
+
         Player player = (Player) egg.getOwner();
         Level level = egg.level();
 
+        if(level.isClientSide()) return;
+
         int EGGSPLOSIVE_LEVEL = getEnchantmentLevel(egg.getItem(), EGGSPLOSIVE);
         int LIGHTNING_LEVEL = getEnchantmentLevel(egg.getItem(), LIGHTNING);
+        int DAMAGE_LEVEL = getEnchantmentLevel(egg.getItem(), DAMAGE);
+        int UNBREGGABLE_LEVEL = getEnchantmentLevel(egg.getItem(), UNBREGGABLE);
 
         if(EGGSPLOSIVE_LEVEL > 0) {
             level.explode(egg, egg.getX(),egg.getY(),egg.getZ(), 2 * EGGSPLOSIVE_LEVEL, Level.ExplosionInteraction.TNT);
@@ -75,26 +84,38 @@ public class ThrownEggMixin {
             ci.cancel();
         }
 
+        if(LIGHTNING_LEVEL > 0) {
+            for(int i = 0; i < LIGHTNING_LEVEL; i++) {
+                LightningBolt bolt = new LightningBolt(EntityType.LIGHTNING_BOLT, level);
+                bolt.setPos(egg.getX(), egg.getY(), egg.getZ());
+                bolt.setXRot(0);
+                bolt.setYRot(0);
+                level.addFreshEntity(bolt);
+            }
+            ci.cancel();
+
+            if(UNBREGGABLE_LEVEL > 0) {
+                level.addFreshEntity(new ItemEntity(level, egg.getX(), egg.getY(), egg.getZ(), egg.getItem()));
+            }
+
+            egg.discard();
+        }
+
         if (result.getType() == HitResult.Type.ENTITY) {
             EntityHitResult entityHitResult = (EntityHitResult) result;
 
             Entity entity = entityHitResult.getEntity();
 
-            if (entity instanceof Player && entity.equals(player)) {
+            if (entity instanceof Player && entity.equals(player) && UNBREGGABLE_LEVEL > 0) {
                 egg.discard();
                 player.addItem(egg.getItem());
-            } else {
-                entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), 5.25f);
-
-                if(LIGHTNING_LEVEL > 0) {
-                    LightningBolt bolt = new LightningBolt(EntityType.LIGHTNING_BOLT, level);
-                    bolt.setPos(egg.getX(),egg.getY(),egg.getZ());
-                    level.addFreshEntity(bolt);
-                }
+            } else if(DAMAGE_LEVEL > 0){
+                entity.hurt(egg.damageSources().thrown(egg, egg.getOwner()), (float) (5.25f * (DAMAGE_LEVEL * 1.25)));
+                ci.cancel();
             }
         }
 
-        if(getEnchantmentLevel(egg.getItem(), UNBREGGABLE) > 0) {
+        if(UNBREGGABLE_LEVEL > 0) {
 
             if (player == null) {
                 egg.discard();

@@ -1,0 +1,4 @@
+{
+  "replace" : false,
+  "values" : ["testmod:unbreggable","testmod:damage","testmod:eggsplosive", "testmod:return", "testmod:lightning"]
+}

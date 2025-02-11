@@ -26,7 +26,7 @@ modId="${mod_id}" #mandatory
 version="${mod_version}" #mandatory
 
 # A display name for the mod
-displayName="${mod_name}" #mandatory
+displayName="Eggchantments" #mandatory
 
 # A URL to query for updates for this mod. See the JSON update specification https://docs.neoforged.net/docs/misc/updatechecker/
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
@@ -41,10 +41,10 @@ displayName="${mod_name}" #mandatory
 #credits="" #optional
 
 # A text field displayed in the mod UI
-authors="${mod_authors}" #optional
+authors="Kreiseljustus" #optional
 
 # The description text for the mod (multi line!) (#mandatory)
-description='''${mod_description}'''
+description='''Adds multiple enchantments for eggs to do different things'''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 [[mixins]]
